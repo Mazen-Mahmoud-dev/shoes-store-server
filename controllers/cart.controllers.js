@@ -2,8 +2,9 @@ const User = require('../models/user.model')
 const AddToCart = async(userId,product)=>{
     try{
         const user = await User.findById(userId);
-        const existingProduct = user.cartProducts.find(cartProduct => cartProduct._id.equals(product._id) && cartProduct.size === product.details[0].size);
+        console.log(product);
         
+        const existingProduct = user.cartProducts.find(cartProduct => cartProduct._id.equals(product._id) && cartProduct.size === product.details[0].size);
         if(product.details.stock !== 0){
             if (existingProduct) {
                 existingProduct.count += 1;
@@ -45,8 +46,6 @@ const AddToCartRoute = async(req,res)=>{
 
 const DelFromCart = async(userId,product)=>{
     try{
-        console.log("product: ",product);
-        
         const user = await User.findById(userId);
         const existingProduct = user.cartProducts.find(cartProduct => cartProduct._id.equals(product._id) && cartProduct.size === product.size);
         if(existingProduct && existingProduct.count > 1){
@@ -59,7 +58,7 @@ const DelFromCart = async(userId,product)=>{
         return { message: 'Product removed from cart' };
     }catch(err){
         return {message:err.message}
-    }
+     }
 }
 const DelFromCartRoute = async(req,res)=>{
     

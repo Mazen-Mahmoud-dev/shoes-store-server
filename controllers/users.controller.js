@@ -6,8 +6,11 @@ const bcrypt = require('bcryptjs')
 const generatejwt = require('../utils/generateJWT.js')
 const sendVerificationEmail = require('../utils/sendEmail');
 const jwt = require('jsonwebtoken')
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
+const dotenv = require('dotenv');
 
-
+dotenv.config();
 const getAllUsers = asyncWrapper(async (req,res)=>{
     const query = req.query
     const limit = query.limit || 5;
@@ -134,7 +137,64 @@ const deleteUser = asyncWrapper(async(req,res,next)=>{
     res.status(200).json({status:SUCCESS,data:null})
 }
 )
+const forgotPassword = asyncWrapper(async (req,res,next)=>{
+    const { email } = req.body;
+    const user = await User.findOne({ email });
 
+    if (!user){
+        const error = appError.create("user not found",404,FAIL);
+        return next(error);
+    }
+
+    const token = crypto.randomBytes(32).toString('hex');
+
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = Date.now() + 7200000;  
+    await user.save();
+    console.log(new Date(user.resetPasswordExpires));    
+    const transporter = nodemailer.createTransport({
+    service: 'Gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass:  process.env.EMAIL_PASS,
+    },
+    });
+
+    const mailOptions = {
+    to: user.email,
+    from: process.env.EMAIL_USER,
+    subject: 'Password Reset',
+    html: `You are receiving this because you (or someone else) have requested the reset of the password for your account.
+    Please click on the following link to complete the process:
+    <a href="http://localhost:3000/reset-password/${token}">Reset Now!</a>`,
+    };
+
+    transporter.sendMail(mailOptions, (err) => {
+    if (err) {
+        return res.status(500).json({ message: 'Error sending email' });
+    }
+    return res.status(200).json({ message: 'Email sent' });
+    });
+})
+const resetPassword = async (req,res)=>{
+    const { token } = req.params;
+  const { password } = req.body;
+
+  const user = await User.findOne({
+    resetPasswordToken: token,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: 'Token is invalid or has expired' });
+  }
+
+  user.password = await bcrypt.hash(password, 10);;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+  res.status(200).json({ message: 'Password reset successful' });
+}
 module.exports = {
     getAllUsers,
     getUser,
@@ -142,4 +202,6 @@ module.exports = {
     verifyEmail,
     login,
     deleteUser,
+    forgotPassword,
+    resetPassword
 }
