@@ -82,8 +82,6 @@ const getFavouriteProductsRoute = async (req, res) => {
     try {
         
         const { userId } = req.body;
-        console.log(req.body);
-        
         const favouriteProducts = await getFavouriteProducts(userId);
         res.status(200).json({data:favouriteProducts});
     } catch (error) {
