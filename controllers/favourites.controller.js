@@ -72,8 +72,7 @@ const getFavouriteProducts = async(userId) => {
         return user.favouriteProducts;
       }
       catch (err){
-        console.log("error: ");
-        
+        console.log("error: ",err);
       }
       
 }
